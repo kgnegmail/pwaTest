@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1.0">
+		<title>
+			test
+		</title>
+		<link rel="apple-touch-icon" href="images/480x480.jpeg">
+		 <link rel="manifest" href="manifest.json" />
+		<script src="jquery-3.1.1.min.js"></script>
+		<script type="text/javascript">
+		
+			if("serviceWorker" in navigator){
+				navigator.serviceWorker.register("sw.js").then(function(){
+					console.log("SW registered");
+				});
+			}
+
+			/*****config start ******/
+			var Authorization = "Basic YXBcYWdpbGVhZG1pbi1kczpBZ2khZTIwMTk=" ;
+			var GetReleasedPIDUrl = "http://CNHKGAGIASD02:13490/AgilePointServer/Workflow/GetReleasedPID/";
+			var CreateProcInstUrl = "http://CNHKGAGIASD02:13490/AgilePointServer/Workflow/CreateProcInst";
+			var GetUUIDUrl = "http://CNHKGAGIASD02:13490/AgilePointServer/Workflow/GetUUID";
+			var projectInfoArray = new Array();
+			
+			/*****config end ******/
+		
+			
+			
+			/*****define the object start******/
+			var projectInfo = function(processName,params){ // projectInfo(string,array);
+				this.processName = processName;
+				this.params = params;
+				return this;
+			}
+			
+			//QCINSP_00_SUB24
+			var qcinspSub24Project = new projectInfo(
+					"QCINSP-QE  approves inspection report _IRP Header",
+					"IRPNum,IRPParty,sendQAEngineerId,QETaskSubject".split(",")
+					);
+			projectInfoArray.push(qcinspSub24Project);
+			
+			
+			//GBMA_UCA14
+			var gbmaUca14Project = new projectInfo(
+					"GBMA-GMA Get record from Milestone System",
+					"isTest".split(",")
+					);
+			projectInfoArray.push(gbmaUca14Project);
+			
+			/*****define the object end******/
+			
+			
+			
+			/*****tool method start******/
+			
+			function loadUca(){
+				for(var i=0;i<projectInfoArray.length;i++){
+					var pj = projectInfoArray[i];
+					var joption = $("<option></option>");
+					joption.val(pj.processName);
+					joption.text(pj.processName);
+					$("#ucaSelect").append(joption);
+				}
+				$("#ucaSelect").change(function(){
+					getUcaParam();
+				});
+			}
+			
+			function startProcess(){
+				var proName = $("#ucaSelect").val();
+				var inputs = $("#paramTable input");
+				var paramMap = [];
+				for(var i=0;i<inputs.length;i++){
+					var jinput = $(inputs[i]);
+					var paramName = jinput.attr("longdesc");
+					var paramValue = jinput.val();
+					paramMap.push({Name:paramName,Value:paramValue});
+				}
+				
+				var fullProcessIdUrl = GetReleasedPIDUrl + proName;
+				
+				doAjax(fullProcessIdUrl,"GET",{},function(data){
+					
+					var processId = data.GetReleasedPIDResult;
+					
+					doAjax(GetUUIDUrl,"GET",{},function(data){
+						var uuid = data.GetUUIDResult;
+						
+						var additionalName = " from html "+ new Date().getTime();
+						var fullInstName = proName+additionalName;
+						
+						var createProcMap = {};
+						createProcMap["ProcessID"]=processId;
+						createProcMap["ProcessInstID"]= uuid;
+						createProcMap["ProcInstName"]= fullInstName;
+						createProcMap["WorkObjID"]= uuid;
+						createProcMap["WorkObjInfo"]= null;
+						createProcMap["SuperProcInstID"]= null;
+						createProcMap["Initiator"]="TEST-API";
+						createProcMap["CustomID"]= uuid;
+						createProcMap["Attributes"]=paramMap;
+						createProcMap["blnStartImmediately"]=true;
+						
+						doAjax(CreateProcInstUrl,"POST",createProcMap,function(data){
+							console.log("============CreateProcInstUrl start============");
+							console.log(data);
+							console.log("============CreateProcInstUrl  end ============");
+							alert("success");
+						});
+						
+					});
+					
+					
+				});
+				
+			}
+			
+			function getUcaParam(){
+				var proName = $("#ucaSelect").val();
+				if(proName.length>0){
+					for(var i=0;i<projectInfoArray.length;i++){
+						var pj = projectInfoArray[i];
+						if(pj.processName == proName){
+							$("#paramTable tr").not(":first").remove();
+							for(var j=0;j<pj.params.length;j++){
+								var paramName = pj.params[j];
+								var jtr = $("<tr></tr>");
+								var pnameTd = $("<td></td>");
+								var pvalueTd = $("<td></td>");
+								var pvalueInput = $("<input type='text' >");
+								pnameTd.text(paramName);
+								pvalueInput.attr("longdesc",paramName);
+								pvalueTd.append(pvalueInput);
+								jtr.append(pnameTd);
+								jtr.append(pvalueTd);
+								$("#paramTable").append(jtr);
+							}
+						}
+					}
+					
+				}
+			}
+			
+			function doAjax(url,type,datas,callback){
+				$.ajax({
+					type:type,
+					url:url,
+					contentType:"application/json",
+					data:JSON.stringify(datas),
+					//data:datas,
+					beforeSend:function(req){
+						req.setRequestHeader("Authorization",Authorization);
+					},
+					success:function(data){
+						callback(data);
+					},
+					error:function(e){
+						alert("error,press F12 to view the console");
+						console.log(e);
+					}
+				});
+			}
+			
+			/*****tool method end******/
+			
+			
+			
+			/*****main logic start******/
+			
+			$(document).ready(function(){
+				loadUca();
+				
+				$("#sendBtn").click(function(){
+					startProcess();
+				});
+			});
+			
+			
+			
+			/*****main logic end******/
+		</script>
+	</head>
+	<body>
+		<div>
+			uca: 
+			<select title="ucaSelect" id="ucaSelect">
+				<option value="">please choose the process</option>
+			</select>
+		</div>
+		<br/>
+		<div>
+			<table border="1" id="paramTable">
+				<tr>
+					<th>Param Name</th><th>Param Value</th>
+				</tr>
+			</table>
+		</div>
+		<br/>
+		<div>
+			<input type="button" id="sendBtn" value="send" />
+		</div>
+	</body>
+</html>

@@ -1,0 +1,17 @@
+{
+    "name": "example-pwa",
+    "version": "1.0.0",
+    "description": "111",
+    "main": "index.js",
+    "scripts": {
+        "start": "http-server -c-1 -p 8081"
+    },
+    "keywords": [
+        "pwa"
+    ],
+    "author": "you",
+    "license": "MIT",
+    "devDependencies": {
+        "http-server": "^14.1.1"
+    }
+}

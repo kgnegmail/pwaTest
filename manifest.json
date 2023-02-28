@@ -1,0 +1,18 @@
+{
+  "name": "example-pwa",
+  "short_name": "example-pwa",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+    "background_color": "#ffffff",
+    "dir": "ltr",
+    "scope": "/",
+    "theme_color": "#ffffff",
+    "icons": [
+      {
+        "src": "images/480x480.jpeg",
+        "type": "image/jpeg",
+        "sizes": "480x480"
+      }
+    ]
+  }
